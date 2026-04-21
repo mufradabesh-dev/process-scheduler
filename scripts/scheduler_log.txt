@@ -1,0 +1,5 @@
+FCFS Result - Sat, Apr 18, 2026 11:52:13 AM
+7 | AT:5 | BT:6 | FT:11 | TAT:6 | WT:0
+4 | AT:6 | BT:7 | FT:18 | TAT:12 | WT:5
+8 | AT:9 | BT:7 | FT:25 | TAT:16 | WT:9
+---

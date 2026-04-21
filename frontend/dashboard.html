@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — Process Scheduler</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+  <script src="auth-check.js"></script>
+  <style>
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .stat-card.cpu::before { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+    .stat-card.ram::before { background: linear-gradient(90deg, var(--accent), var(--accent4)); }
+    .stat-card.disk::before { background: linear-gradient(90deg, var(--accent3), var(--warning, #ffaa00)); }
+    .stat-card.proc::before { background: linear-gradient(90deg, #3b82f6, var(--accent2)); }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0,245,255,0.08);
+    }
+
+    .stat-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-family: var(--sans);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 5px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+    }
+
+    .cpu .progress-fill { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+    .ram .progress-fill { background: linear-gradient(90deg, var(--accent), var(--accent4)); }
+    .disk .progress-fill { background: linear-gradient(90deg, var(--accent3), #ffaa00); }
+
+    .chart-area {
+      position: relative;
+      height: 120px;
+      margin-top: 10px;
+    }
+
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 100%;
+    }
+
+    .chart-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      transition: height 0.5s ease;
+      min-height: 4px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .chart-bar:hover::after {
+      content: attr(data-val);
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .app-launch-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.2s;
+    }
+
+    .app-launch-item:hover { background: rgba(0,245,255,0.03); }
+    .app-launch-item:last-child { border-bottom: none; }
+
+    .app-name {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+
+    .app-time {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+
+    .app-time.fast { color: var(--accent4); background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.2); }
+    .app-time.medium { color: #ffaa00; background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.2); }
+    .app-time.slow { color: var(--accent3); background: rgba(255,45,120,0.1); border: 1px solid rgba(255,45,120,0.2); }
+
+    .launch-form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+      align-items: flex-end;
+    }
+
+    .algo-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .algo-stat:last-child { border-bottom: none; }
+
+    .algo-bar-wrap {
+      flex: 1;
+      margin: 0 15px;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .algo-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+    }
+
+    .live-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent4);
+      margin-right: 6px;
+      animation: pulse 1.5s infinite;
+    }
+
+    .nav-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 25px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-back:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .dash-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .dash-title {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 3px;
+    }
+
+    .dash-title span { color: var(--accent); }
+
+    .refresh-btn {
+      background: rgba(0,245,255,0.08);
+      color: var(--accent);
+      border: 1px solid rgba(0,245,255,0.3);
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(0,245,255,0.15);
+      box-shadow: 0 0 15px rgba(0,245,255,0.2);
+    }
+
+    .preset-apps {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .preset-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent2);
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<div class="container">
+
+  <!-- Nav -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px;">
+    <a class="nav-back" onclick="window.location.href='index.html'">← Back to Scheduler</a>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span id="userDisplay" style="font-family:var(--mono); font-size:0.75rem; color:var(--accent);"></span>
+      <button onclick="logout()" style="background:rgba(255,45,120,0.15); color:#ff2d78; border:1px solid rgba(255,45,120,0.4); padding:7px 14px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:0.7rem;">⏻ LOGOUT</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">SYSTEM <span>DASHBOARD</span></div>
+      <div style="font-family:var(--mono); font-size:0.68rem; color:var(--text-dim); letter-spacing:2px; margin-top:4px;">
+        <span class="live-dot"></span>LIVE MONITORING
+        <span id="lastUpdate" style="margin-left:10px;"></span>
+      </div>
+    </div>
+    <button class="refresh-btn" onclick="refreshAll()">↻ REFRESH</button>
+  </div>
+
+  <!-- System Stats Grid -->
+  <div class="dash-grid">
+
+    <!-- CPU -->
+    <div class="stat-card cpu">
+      <div class="stat-icon">💻</div>
+      <div class="stat-label">CPU Usage</div>
+      <div class="stat-value" id="cpuVal">--</div>
+      <div class="stat-sub" id="cpuSub">Loading...</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="cpuBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- RAM -->
+    <div class="stat-card ram">
+      <div class="stat-icon">🧠</div>
+      <div class="stat-label">RAM Usage</div>
+      <div class="stat-value" id="ramVal">--</div>
+      <div class="stat-sub" id="ramSub">Loading...</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="ramBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Disk -->
+    <div class="stat-card disk">
+      <div class="stat-icon">💾</div>
+      <div class="stat-label">Disk Usage</div>
+      <div class="stat-value" id="diskVal">--</div>
+      <div class="stat-sub" id="diskSub">Loading...</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="diskBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Processes -->
+    <div class="stat-card proc">
+      <div class="stat-icon">⚙️</div>
+      <div class="stat-label">Running Processes</div>
+      <div class="stat-value" id="procVal">--</div>
+      <div class="stat-sub" id="uptimeSub">Uptime: loading...</div>
+    </div>
+
+  </div>
+
+  <!-- CPU History Chart -->
+  <div class="card">
+    <div class="card-title">📈 CPU Usage History (Last 20 readings)</div>
+    <div class="chart-area">
+      <div class="chart-bars" id="cpuChart"></div>
+    </div>
+    <div style="font-family:var(--mono); font-size:0.68rem; color:var(--text-dim); margin-top:8px; letter-spacing:1px;">
+      Each bar = 3 second interval
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; flex-wrap:wrap;">
+
+    <!-- App Launcher -->
+    <div class="card" style="grid-column: span 2;">
+      <div class="card-title">🚀 App Launch Time Tracker</div>
+      <p class="info-text">Track how long apps take to launch. Uses app_launcher.sh script connected to your system.</p>
+
+      <div style="margin-bottom:10px;">
+        <div class="stat-label" style="margin-bottom:8px;">Quick Launch Presets:</div>
+        <div class="preset-apps">
+          <button class="preset-btn" onclick="setApp('Notepad', 'notepad')">📝 Notepad</button>
+          <button class="preset-btn" onclick="setApp('Calculator', 'calc')">🔢 Calculator</button>
+          <button class="preset-btn" onclick="setApp('Paint', 'mspaint')">🎨 Paint</button>
+          <button class="preset-btn" onclick="setApp('Chrome', 'google-chrome')">🌐 Chrome</button>
+          <button class="preset-btn" onclick="setApp('Firefox', 'firefox')">🦊 Firefox</button>
+          <button class="preset-btn" onclick="setApp('VS Code', 'code')">💻 VS Code</button>
+          <button class="preset-btn" onclick="setApp('File Explorer', 'explorer')">📁 Explorer</button>
+        </div>
+      </div>
+
+      <div class="launch-form">
+        <div class="input-group" style="flex:1; min-width:140px;">
+          <label>App Name</label>
+          <input type="text" id="appName" placeholder="e.g. Notepad" />
+        </div>
+        <div class="input-group" style="flex:2; min-width:200px;">
+          <label>App Command</label>
+          <input type="text" id="appCmd" placeholder="e.g. notepad or calc" />
+        </div>
+        <button class="btn-run" onclick="launchApp()" id="launchBtn">🚀 Launch & Track</button>
+      </div>
+
+      <div id="launchResult" style="margin-bottom:15px;"></div>
+
+      <div class="card-title" style="margin-top:10px;">📋 Launch History</div>
+      <div id="launchHistory">
+        <div style="color:var(--text-dim); font-family:var(--mono); font-size:0.8rem; padding:15px;">No launches recorded yet</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Analytics -->
+  <div class="card" style="margin-top:0;">
+    <div class="card-title">📊 Scheduling Analytics</div>
+    <div id="analyticsContent">
+      <div style="color:var(--text-dim); font-family:var(--mono); font-size:0.8rem; padding:15px;">Loading analytics...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = "https://freefall-handoff-growl.ngrok-free.dev/api/dashboard";
+const NGROK_HEADERS = {
+  "ngrok-skip-browser-warning": "true",
+  "Content-Type": "application/json"
+};
+let cpuHistory = [];
+let autoRefresh = null;
+
+// Set preset app
+function setApp(name, cmd) {
+  document.getElementById("appName").value = name;
+  document.getElementById("appCmd").value = cmd;
+}
+
+// Fetch system stats
+async function fetchSystem() {
+  try {
+    const res = await fetch(`${API}/system`, { headers: NGROK_HEADERS });
+    const data = await res.json();
+
+    // CPU
+    const cpu = parseFloat(data.cpu) || 0;
+    document.getElementById("cpuVal").textContent = cpu.toFixed(1) + "%";
+    document.getElementById("cpuSub").textContent = data.simulated ? "Simulated data" : "Real-time";
+    document.getElementById("cpuBar").style.width = Math.min(cpu, 100) + "%";
+
+    // RAM
+    const ramPct = parseFloat(data.ram.percent) || 0;
+    document.getElementById("ramVal").textContent = ramPct.toFixed(1) + "%";
+    document.getElementById("ramSub").textContent = `${data.ram.used}MB / ${data.ram.total}MB`;
+    document.getElementById("ramBar").style.width = Math.min(ramPct, 100) + "%";
+
+    // Disk
+    const diskPct = parseFloat(data.disk.percent) || 0;
+    document.getElementById("diskVal").textContent = diskPct + "%";
+    document.getElementById("diskSub").textContent = `${data.disk.used} / ${data.disk.total}`;
+    document.getElementById("diskBar").style.width = Math.min(diskPct, 100) + "%";
+
+    // Processes
+    document.getElementById("procVal").textContent = data.processes;
+    document.getElementById("uptimeSub").textContent = "Uptime: " + data.uptime;
+
+    // Last update
+    document.getElementById("lastUpdate").textContent = "Updated: " + data.timestamp;
+
+    // CPU History Chart
+    cpuHistory.push(cpu);
+    if (cpuHistory.length > 20) cpuHistory.shift();
+    renderCpuChart();
+
+  } catch {
+    document.getElementById("cpuVal").textContent = "ERR";
+    document.getElementById("ramVal").textContent = "ERR";
+  }
+}
+
+// CPU History Chart
+function renderCpuChart() {
+  const chart = document.getElementById("cpuChart");
+  const max = Math.max(...cpuHistory, 10);
+
+  chart.innerHTML = cpuHistory.map((val, i) => {
+    const h = (val / max) * 100;
+    const color = val > 80 ? "#ff2d78" : val > 50 ? "#ffaa00" : "#00f5ff";
+    return `<div class="chart-bar" 
+      style="height:${h}%; background:${color}; opacity:${0.4 + (i / cpuHistory.length) * 0.6};"
+      data-val="${val.toFixed(1)}%"></div>`;
+  }).join("");
+}
+
+// Launch App
+async function launchApp() {
+  const appName = document.getElementById("appName").value.trim();
+  const appCmd = document.getElementById("appCmd").value.trim();
+
+  if (!appName || !appCmd) {
+    alert("Please enter app name and command!");
+    return;
+  }
+
+  const btn = document.getElementById("launchBtn");
+  btn.textContent = "⏳ Launching...";
+  btn.disabled = true;
+
+  const resultDiv = document.getElementById("launchResult");
+  resultDiv.innerHTML = `<div style="font-family:var(--mono); font-size:0.8rem; color:var(--accent); padding:10px; background:rgba(0,245,255,0.05); border-radius:8px; border-left:3px solid var(--accent);">⏳ Launching ${appName}... please wait</div>`;
+
+  try {
+    const res = await fetch(`${API}/launch-app`, {
+      method: "POST",
+      headers: NGROK_HEADERS,
+      body: JSON.stringify({ appName, appCmd })
+    });
+
+    const data = await res.json();
+    const ms = data.launchTimeMs;
+    const speed = ms < 1000 ? "fast" : ms < 3000 ? "medium" : "slow";
+    const emoji = ms < 1000 ? "⚡" : ms < 3000 ? "🟡" : "🐢";
+
+    resultDiv.innerHTML = `
+      <div style="padding:15px; background:rgba(0,255,136,0.06); border:1px solid rgba(0,255,136,0.2); border-radius:10px; font-family:var(--mono);">
+        <div style="font-size:1rem; color:#fff; margin-bottom:5px;">${emoji} <b>${appName}</b> launched!</div>
+        <div style="font-size:0.85rem; color:var(--accent4);">Launch Time: <b>${ms}ms</b> (${(ms/1000).toFixed(2)}s)</div>
+        <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">Speed: ${speed.toUpperCase()}</div>
+      </div>`;
+
+    loadLaunchHistory();
+
+  } catch {
+    resultDiv.innerHTML = `<div style="padding:12px; background:rgba(255,45,120,0.08); border:1px solid rgba(255,45,120,0.2); border-radius:8px; font-family:var(--mono); font-size:0.8rem; color:#ff2d78;">Server offline! Start node server.js</div>`;
+  } finally {
+    btn.textContent = "🚀 Launch & Track";
+    btn.disabled = false;
+  }
+}
+
+// Load Launch History
+async function loadLaunchHistory() {
+  try {
+    const res = await fetch(`${API}/app-launches`, { headers: NGROK_HEADERS });
+    const data = await res.json();
+    const container = document.getElementById("launchHistory");
+
+    if (data.length === 0) {
+      container.innerHTML = `<div style="color:var(--text-dim); font-family:var(--mono); font-size:0.8rem; padding:15px;">No launches recorded yet</div>`;
+      return;
+    }
+
+    container.innerHTML = data.map(item => {
+      const ms = item.launch_time_ms || item.launch_time || 0;
+      const speed = ms < 1000 ? "fast" : ms < 3000 ? "medium" : "slow";
+      return `
+        <div class="app-launch-item">
+          <div>
+            <div class="app-name">🖥️ ${item.app_name}</div>
+            <div style="font-family:var(--mono); font-size:0.7rem; color:var(--text-dim); margin-top:2px;">${item.started_at || item.launched_at || ""}</div>
+          </div>
+          <span class="app-time ${speed}">${ms}ms</span>
+        </div>`;
+    }).join("");
+  } catch {
+    document.getElementById("launchHistory").innerHTML = `<div style="color:var(--text-dim); font-family:var(--mono); font-size:0.8rem; padding:15px;">Could not load history</div>`;
+  }
+}
+
+// Load Analytics
+async function loadAnalytics() {
+  try {
+    const res = await fetch(`${API}/analytics`, { headers: NGROK_HEADERS });
+    const data = await res.json();
+
+    const algos = data.byAlgorithm || [];
+    const total = data.totalRuns?.[0]?.count || 0;
+
+    if (algos.length === 0) {
+      document.getElementById("analyticsContent").innerHTML = `
+        <div style="color:var(--text-dim); font-family:var(--mono); font-size:0.8rem; padding:15px;">
+          No scheduling data yet. Run some algorithms first!
+        </div>`;
+      return;
+    }
+
+    const maxWait = Math.max(...algos.map(a => parseFloat(a.avgWait) || 0), 1);
+
+    document.getElementById("analyticsContent").innerHTML = `
+      <div style="font-family:var(--mono); font-size:0.75rem; color:var(--text-dim); letter-spacing:1px; margin-bottom:15px;">
+        TOTAL RUNS: <b style="color:var(--accent)">${total}</b>
+      </div>
+      ${algos.map(a => `
+        <div class="algo-stat">
+          <div style="min-width:120px;">
+            <div style="font-family:var(--mono); font-size:0.82rem; color:var(--accent);">${a.algorithm}</div>
+            <div style="font-family:var(--mono); font-size:0.68rem; color:var(--text-dim);">${a.count} runs</div>
+          </div>
+          <div class="algo-bar-wrap">
+            <div class="algo-bar-fill" style="width:${(parseFloat(a.avgWait)/maxWait*100).toFixed(0)}%"></div>
+          </div>
+          <div style="min-width:100px; text-align:right;">
+            <div style="font-family:var(--mono); font-size:0.78rem; color:#fff;">Avg Wait: <b>${parseFloat(a.avgWait).toFixed(2)}</b></div>
+            <div style="font-family:var(--mono); font-size:0.68rem; color:var(--text-dim);">TAT: ${parseFloat(a.avgTAT).toFixed(2)}</div>
+          </div>
+        </div>`).join("")}`;
+
+  } catch {
+    document.getElementById("analyticsContent").innerHTML = `<div style="color:var(--text-dim); padding:15px; font-family:var(--mono); font-size:0.8rem;">Server offline!</div>`;
+  }
+}
+
+// Refresh all
+function refreshAll() {
+  fetchSystem();
+  loadLaunchHistory();
+  loadAnalytics();
+}
+
+// Init
+window.onload = () => {
+  refreshAll();
+  autoRefresh = setInterval(fetchSystem, 3000);
+};
+
+window.onbeforeunload = () => {
+  if (autoRefresh) clearInterval(autoRefresh);
+};
+</script>
+
+</body>
+</html>

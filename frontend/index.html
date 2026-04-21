@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Process Scheduler</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+  <script src="auth-check.js"></script>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <header>
+      <div class="header-icon">⚙️</div>
+      <h1>PROCESS <span>SCHEDULER</span></h1>
+      <p class="subtitle">OS Scheduling Algorithms Simulator</p>
+      <div class="status-bar">
+        <span id="serverStatus" class="status-dot offline">● Server Checking...</span>
+        <span id="dbStatus" class="status-dot offline">● DB Checking...</span>
+      </div>
+      <div style="position:absolute; top:20px; right:20px; display:flex; gap:10px; align-items:center;">
+        <span id="userDisplay" style="font-family:var(--mono); font-size:0.75rem; color:var(--accent); letter-spacing:1px;"></span>
+        <button onclick="logout()" style="background:rgba(255,45,120,0.15); color:#ff2d78; border:1px solid rgba(255,45,120,0.4); padding:7px 14px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:0.7rem; letter-spacing:1px;">⏻ LOGOUT</button>
+        <button onclick="window.location.href='dashboard.html'" style="background:rgba(0,245,255,0.1); color:var(--accent); border:1px solid rgba(0,245,255,0.3); padding:7px 14px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:0.7rem; letter-spacing:1px;">📊 Dashboard</button>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('scheduler', event)">⚙️ Scheduler</button>
+      <button class="tab" onclick="showTab('compare', event)">⚡ Compare All</button>
+      <button class="tab" onclick="showTab('bankers', event)">🏦 Banker's</button>
+      <button class="tab" onclick="showTab('history', event)">🕘 History</button>
+    </div>
+
+    <!-- TAB 1: SCHEDULER -->
+    <div id="tab-scheduler" class="tab-content active">
+      <div class="card">
+        <div class="card-title">🎯 Select Algorithm</div>
+        <div class="algo-grid">
+          <button class="algo-btn active" onclick="selectAlgo('FCFS', this)">FCFS</button>
+          <button class="algo-btn" onclick="selectAlgo('SJF', this)">SJF</button>
+          <button class="algo-btn" onclick="selectAlgo('RoundRobin', this)">Round Robin</button>
+          <button class="algo-btn" onclick="selectAlgo('Priority', this)">Priority</button>
+        </div>
+        <input type="hidden" id="algorithm" value="FCFS" />
+        <div id="quantumDiv" style="display:none; margin-top:15px;">
+          <label>Time Quantum:</label>
+          <input type="number" id="quantum" value="2" min="1" style="width:100px;" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">➕ Add Process</div>
+        <div class="input-row">
+          <div class="input-group">
+            <label>Process ID</label>
+            <input type="text" id="processId" placeholder="P1" />
+          </div>
+          <div class="input-group">
+            <label>Arrival Time</label>
+            <input type="number" id="arrivalTime" placeholder="0" min="0" />
+          </div>
+          <div class="input-group">
+            <label>Burst Time</label>
+            <input type="number" id="burstTime" placeholder="5" min="1" />
+          </div>
+          <div class="input-group" id="priorityGroup" style="display:none;">
+            <label>Priority</label>
+            <input type="number" id="priorityInput" placeholder="1" min="1" />
+          </div>
+          <button class="btn-add" onclick="addProcess()">+ Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Process List <span id="processCount" class="badge">0</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>Arrival Time</th>
+                <th>Burst Time</th>
+                <th>Priority</th>
+                <th>Remove</th>
+              </tr>
+            </thead>
+            <tbody id="processBody">
+              <tr><td colspan="5" class="empty-msg">No processes added yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="btn-row">
+          <button class="btn-run" onclick="runScheduler()">▶ Run Scheduler</button>
+          <button class="btn-clear" onclick="clearAll()">🗑 Clear All</button>
+        </div>
+      </div>
+
+      <div class="card" id="resultCard" style="display:none;">
+        <div class="card-title">📊 Results — <span id="resultAlgo" class="highlight"></span></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>Arrival</th>
+                <th>Burst</th>
+                <th>Start</th>
+                <th>Finish</th>
+                <th>Turnaround</th>
+                <th>Waiting</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+          </table>
+        </div>
+        <div id="averages" class="averages-box"></div>
+      </div>
+
+      <div class="card" id="ganttCard" style="display:none;">
+        <div class="card-title">📅 Gantt Chart</div>
+        <div id="ganttChart" class="gantt-wrap"></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: COMPARE ALL -->
+    <div id="tab-compare" class="tab-content">
+
+      <div class="card">
+        <div class="card-title">⚡ Compare All Algorithms</div>
+        <p class="info-text">Add processes below, then click Run Comparison to see all 4 algorithms side by side — and find out which is BEST for your processes.</p>
+
+        <div class="input-row">
+          <div class="input-group">
+            <label>Process ID</label>
+            <input type="text" id="cmpProcessId" placeholder="P1" />
+          </div>
+          <div class="input-group">
+            <label>Arrival Time</label>
+            <input type="number" id="cmpArrival" placeholder="0" min="0" />
+          </div>
+          <div class="input-group">
+            <label>Burst Time</label>
+            <input type="number" id="cmpBurst" placeholder="5" min="1" />
+          </div>
+          <div class="input-group">
+            <label>Priority</label>
+            <input type="number" id="cmpPriority" placeholder="1" min="1" />
+          </div>
+          <button class="btn-add" onclick="addCmpProcess()">+ Add</button>
+        </div>
+
+        <div class="table-wrap" style="margin-top:15px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>Arrival</th>
+                <th>Burst</th>
+                <th>Priority</th>
+                <th>Remove</th>
+              </tr>
+            </thead>
+            <tbody id="cmpProcessBody">
+              <tr><td colspan="5" class="empty-msg">No processes added yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:15px; align-items:flex-end; flex-wrap:wrap;">
+          <div class="input-group" style="max-width:160px;">
+            <label>Round Robin Quantum</label>
+            <input type="number" id="cmpQuantum" value="2" min="1" />
+          </div>
+          <button class="btn-run" onclick="runComparison()">⚡ Run Comparison</button>
+          <button class="btn-clear" onclick="clearCmp()">🗑 Clear</button>
+        </div>
+      </div>
+
+      <!-- Winner Banner -->
+      <div id="winnerBanner" style="display:none;" class="card winner-card">
+        <div class="card-title">🏆 Best Algorithm</div>
+        <div id="winnerContent"></div>
+      </div>
+
+      <!-- Summary Table -->
+      <div id="summaryCard" style="display:none;" class="card">
+        <div class="card-title">📊 Algorithm Comparison Summary</div>
+        <div class="table-wrap">
+          <table id="summaryTable">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Avg Waiting Time</th>
+                <th>Avg Turnaround Time</th>
+                <th>Best For</th>
+                <th>Rank</th>
+              </tr>
+            </thead>
+            <tbody id="summaryBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Process Order Table -->
+      <div id="processOrderCard" style="display:none;" class="card">
+        <div class="card-title">🔢 Process Execution Order — Per Algorithm</div>
+        <p class="info-text">Shows when each process starts and finishes in each algorithm.</p>
+        <div class="table-wrap">
+          <table id="processOrderTable">
+            <thead id="processOrderHead"></thead>
+            <tbody id="processOrderBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Individual Algorithm Results -->
+      <div id="allAlgoResults"></div>
+
+    </div>
+
+    <!-- TAB 3: BANKER'S -->
+    <div id="tab-bankers" class="tab-content">
+      <div class="card">
+        <div class="card-title">🏦 Banker's Algorithm — Deadlock Avoidance</div>
+        <p class="info-text">Enter number of processes and resources, then click Generate.</p>
+
+        <div style="display:flex; gap:15px; flex-wrap:wrap; margin-bottom:15px; align-items:flex-end;">
+          <div class="input-group" style="max-width:180px;">
+            <label>Number of Processes</label>
+            <input type="number" id="bProcessCount" value="3" min="1" max="10" />
+          </div>
+          <div class="input-group" style="max-width:180px;">
+            <label>Number of Resources</label>
+            <input type="number" id="bResourceCount" value="3" min="1" max="10" />
+          </div>
+          <button class="btn-add" onclick="generateBankersInputs()">⚡ Generate</button>
+        </div>
+
+        <div id="bankersInputArea"></div>
+
+        <button class="btn-run" style="margin-top:15px;" onclick="runBankers()">
+          🏦 Run Banker's Algorithm
+        </button>
+        <div id="bankersResult" style="margin-top:20px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB 4: HISTORY -->
+    <div id="tab-history" class="tab-content">
+      <div class="card">
+        <div class="card-title">🕘 Scheduling History</div>
+        <div class="btn-row">
+          <button class="btn-run" onclick="loadHistory()">🔄 Load History</button>
+          <button class="btn-clear" onclick="clearHistory()">🗑 Clear History</button>
+        </div>
+        <div class="table-wrap" style="margin-top:15px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Process</th>
+                <th>Algorithm</th>
+                <th>Arrival</th>
+                <th>Burst</th>
+                <th>Waiting</th>
+                <th>Turnaround</th>
+                <th>Finish</th>
+                <th>Date & Time</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="8" class="empty-msg">Click Load History to view records</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

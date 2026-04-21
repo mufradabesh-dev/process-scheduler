@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Process Scheduler — Login</title>
+  <link rel="stylesheet" href="login-style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+
+  <div class="particles">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+  </div>
+
+  <div class="auth-wrapper">
+
+    <!-- Logo with Cat -->
+    <div class="logo">
+      <div class="cat-container">
+        <img
+          src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=120&h=120&fit=crop&crop=face"
+          alt="Cat"
+          class="cat-photo"
+          onerror="this.src='https://cataas.com/cat?width=120&height=120'"
+        />
+        <div class="cat-glow"></div>
+      </div>
+      <h1>PROCESS <span>SCHEDULER</span></h1>
+      <p>OS Scheduling Algorithms Simulator</p>
+    </div>
+
+    <div class="auth-card">
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="loginTab" onclick="switchTab('login')">
+          🔐 Login
+        </button>
+        <button class="auth-tab" id="registerTab" onclick="switchTab('register')">
+          📝 Register
+        </button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="loginForm" class="auth-form active">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="your@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="loginPassword" placeholder="••••••••" />
+            <button class="eye-btn" onclick="togglePass('loginPassword')">👁</button>
+          </div>
+        </div>
+        <div id="loginError" class="error-msg"></div>
+        <button class="submit-btn" onclick="handleLogin()">▶ LOGIN</button>
+        <p class="switch-text">
+          No account? <a onclick="switchTab('register')">Register here</a>
+        </p>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="registerForm" class="auth-form">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="regUsername" placeholder="your_username" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="regEmail" placeholder="your@email.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="regPassword" placeholder="Min 6 characters" />
+            <button class="eye-btn" onclick="togglePass('regPassword')">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="regConfirm" placeholder="Repeat password" />
+            <button class="eye-btn" onclick="togglePass('regConfirm')">👁</button>
+          </div>
+        </div>
+        <div id="registerError" class="error-msg"></div>
+        <button class="submit-btn" onclick="handleRegister()">✚ CREATE ACCOUNT</button>
+        <p class="switch-text">
+          Already have an account? <a onclick="switchTab('login')">Login here</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="login-script.js"></script>
+</body>
+</html>
